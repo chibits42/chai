@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::token;
 
 pub struct Scanner {
@@ -7,6 +9,8 @@ pub struct Scanner {
     start: u64,
     current: u64,
     line: u64,
+
+    keywords: HashMap<String, token::TokType>,
 }
 
 impl Scanner {
@@ -18,6 +22,23 @@ impl Scanner {
             start: 0,
             current: 0,
             line: 1,
+
+            keywords: HashMap::from([
+                ("if".to_string(), token::TokType::If),
+                ("else".to_string(), token::TokType::Else),
+                ("fn".to_string(), token::TokType::Fn),
+                ("def".to_string(), token::TokType::Def),
+                ("set".to_string(), token::TokType::Set),
+                ("for".to_string(), token::TokType::For),
+                ("foreach".to_string(), token::TokType::ForEach),
+                ("while".to_string(), token::TokType::While),
+                ("true".to_string(), token::TokType::True),
+                ("false".to_string(), token::TokType::False),
+                ("int".to_string(), token::TokType::IntType),
+                ("float".to_string(), token::TokType::FloatType),
+                ("str".to_string(), token::TokType::StrType),
+                ("char".to_string(), token::TokType::CharType),
+            ]),
         }
     }
 
@@ -93,11 +114,88 @@ impl Scanner {
             '\n' => { self.line += 1 },
 
             // OO WEE STRINGS N NUMBERS N SHIT
+            '"' => self.string(),
 
-
-            _ => self.char_error(c),
+            _ => {
+                if c.is_digit(10) {
+                    self.number();
+                } else if self.is_alpha(c) {
+                    self.identifier();
+                }
+                else { self.char_error(c) }
+            },
             //   ^^^ this is bad,,, oh well :3
         }
+    }
+
+    fn identifier(&mut self) {
+        while self.is_alphanumeric(self.peek()) { self.advance(); }
+
+        self.add_token_type(token::TokType::Identifier);
+    }
+
+    fn number(&mut self) {
+        let mut float = false;
+
+        while self.peek().is_digit(10) { self.advance(); }
+
+        if self.peek() == '.' && self.peek_next().is_digit(10) {
+            float = true;
+            self.advance();
+            while self.peek().is_digit(10) { self.advance(); }
+        }
+
+        let buf = &self.src.as_str()[self.start as usize..self.current as usize];
+
+        if float {
+            self.add_token(
+                token::TokType::Float,
+                token::Literal::Float(
+                    buf.parse::<f64>().unwrap()
+                ),
+            );
+        } else {
+            self.add_token(
+                token::TokType::Int,
+                token::Literal::Int(
+                    buf.parse::<i64>().unwrap()
+                ),
+            );
+        } 
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' { self.line += 1 };
+            self.advance();
+        }
+        
+        if self.is_at_end() {
+            token::error(self.line, String::from("Unterminated string."));
+            return;
+        }
+
+        self.advance();
+
+        let val = &self.src.as_str()[(self.start + 1) as usize..(self.current - 1) as usize];
+
+        self.add_token(
+            token::TokType::String,
+            token::Literal::Str(val.to_string()),
+        );
+    }
+
+    fn is_alpha(&self, c: char) -> bool {
+        c.is_alphabetic() || c == '_'
+    }
+
+    fn is_alphanumeric(&self, c: char) -> bool {
+        self.is_alpha(c) || c.is_digit(10)
+    }
+
+    fn peek_next(&mut self) -> char {
+        if (self.current + 1) as usize >= self.src.len() { return '\0' }
+        return self.src.chars().nth((self.current + 1) as usize).unwrap();
     }
 
     fn add_token_type(&mut self, typ: token::TokType) {

@@ -11,7 +11,9 @@ pub enum TokType {
     lParen, rParen, lBrack, rBrack, lCurl, rCurl,
     Semicolon,
 
-    Identifier, String, Number,
+    Identifier, String, Int, Float, Char,
+
+    IntType, StrType, FloatType, CharType,
 
     If, Else, Fn,
     Add, Sub, Mul, Div,
