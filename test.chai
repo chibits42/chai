@@ -1,9 +1,1 @@
-// test comment lol
-
-def piss[+ x y z]
-
-fn sum((int x) (int y)) {
-	ret [+ x y]
-}
-
-
+[+ 4 2 5 9 2 x y]

@@ -6,7 +6,7 @@ pub enum Literal {
     Null,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokType {
     lParen, rParen, lBrack, rBrack, lCurl, rCurl,
     Semicolon,
@@ -24,16 +24,18 @@ pub enum TokType {
     Ret,
     Ng, // negate
 
+    Expr, Block, Arr,
+
     Eof,
 }
 
 #[derive(Clone, Debug)]
 pub struct Token {
-    ltype: TokType,
-    lexeme: String,
-    literal: Literal,
-    line: u64,
-    had_error: bool,
+    pub ltype: TokType,
+    pub lexeme: String,
+    pub literal: Literal,
+    pub line: u64,
+    pub had_error: bool,
 }
 
 impl Token {
