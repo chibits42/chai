@@ -38,8 +38,13 @@ impl Scanner {
                 ("float".to_string(), token::TokType::FloatType),
                 ("str".to_string(), token::TokType::StrType),
                 ("char".to_string(), token::TokType::CharType),
+                ("ret".to_string(), token::TokType::Ret),
             ]),
         }
+    }
+
+    fn substring(&mut self, st: String, a: u64, b: u64) -> String {
+        st.as_str()[a as usize..b as usize].to_string()
     }
 
     pub fn scan_tokens(&mut self) -> Vec<token::Token> {
@@ -64,7 +69,10 @@ impl Scanner {
 
     fn scan_token(&mut self) {
         let c: char = self.advance();
-        println!("{} {}", c, self.current);
+
+        // debug printing:
+        // println!("{} {}", c, self.current);
+
         match c {
             '(' => self.add_token_type(token::TokType::lParen),
             ')' => self.add_token_type(token::TokType::rParen),
@@ -112,8 +120,7 @@ impl Scanner {
             ' ' | '\r' | '\t' => { },
 
             '\n' => { self.line += 1 },
-
-            // OO WEE STRINGS N NUMBERS N SHIT
+ 
             '"' => self.string(),
 
             _ => {
@@ -130,8 +137,15 @@ impl Scanner {
 
     fn identifier(&mut self) {
         while self.is_alphanumeric(self.peek()) { self.advance(); }
+        
+        let text = self.substring(self.src.clone(), self.start, self.current);
 
-        self.add_token_type(token::TokType::Identifier);
+        let typ = self.keywords.get(&text);
+
+        match typ {
+            Some(i) => self.add_token_type(typ.unwrap().clone()),
+            None => self.add_token_type(token::TokType::Identifier),
+        } 
     }
 
     fn number(&mut self) {
@@ -143,9 +157,9 @@ impl Scanner {
             float = true;
             self.advance();
             while self.peek().is_digit(10) { self.advance(); }
-        }
+        } 
 
-        let buf = &self.src.as_str()[self.start as usize..self.current as usize];
+        let buf = self.substring(self.src.clone(), self.start, self.current);
 
         if float {
             self.add_token(
@@ -177,7 +191,7 @@ impl Scanner {
 
         self.advance();
 
-        let val = &self.src.as_str()[(self.start + 1) as usize..(self.current - 1) as usize];
+        let val = self.substring(self.src.clone(), self.start + 1, self.current);
 
         self.add_token(
             token::TokType::String,
@@ -203,7 +217,8 @@ impl Scanner {
     }
 
     fn add_token(&mut self, typ: token::TokType, literal: token::Literal) {
-        let text = &self.src.as_str()[self.start as usize..self.current as usize];
+        let text = self.substring(self.src.clone(), self.start, self.current); 
+
         self.tokens.push(token::Token::new(typ, text.to_string(), literal, self.line));
     }
 

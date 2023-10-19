@@ -1,6 +1,8 @@
-(( )) {}
+// test comment lol
 
->= > + - ==
-// comment
-<= + - * /
+def piss[+ x y z]
+
+fn sum((int x) (int y)) {
+	ret [+ x y]
+}
 

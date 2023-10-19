@@ -17,10 +17,11 @@ pub enum TokType {
 
     If, Else, Fn,
     Add, Sub, Mul, Div,
-    Def, For, ForEach, While,
+    Def, Set, For, ForEach, While,
     Greater, Less, Not,
     NotEq, Equal, LessEq, GreaterEq,
     True, False,
+    Ret,
 
     Eof,
 }
