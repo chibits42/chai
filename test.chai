@@ -6,3 +6,4 @@ fn sum((int x) (int y)) {
 	ret [+ x y]
 }
 
+

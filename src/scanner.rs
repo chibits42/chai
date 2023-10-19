@@ -39,6 +39,7 @@ impl Scanner {
                 ("str".to_string(), token::TokType::StrType),
                 ("char".to_string(), token::TokType::CharType),
                 ("ret".to_string(), token::TokType::Ret),
+                ("ng".to_string(), token::TokType::Ng),
             ]),
         }
     }

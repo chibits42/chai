@@ -22,6 +22,7 @@ pub enum TokType {
     NotEq, Equal, LessEq, GreaterEq,
     True, False,
     Ret,
+    Ng, // negate
 
     Eof,
 }
