@@ -3,6 +3,7 @@ pub enum Literal {
     Int(i64),
     Float(f64),
     Str(String),
+    /* Char(char), */
     Null,
 }
 
@@ -26,6 +27,8 @@ pub enum TokType {
 
     Expr, Block, Arr,
 
+
+    Newline,
     Eof,
 }
 

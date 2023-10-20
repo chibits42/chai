@@ -1,142 +1,129 @@
 use crate::token::*;
+
+// pub enum Node {
+//     Null,
+//
+//     // types
+//     Num(i64),
+//     Float(f64),
+//     Str(String),
+//     Char(char),
+//     Bool(bool),
+//
+//     Expr(Vec<Node>),
+//     Block(Vec<Node>),
+//     Arr(Vec<Node>),
+//
+//     Add(Vec<Node>),
+//     Sub(Vec<Node>),
+//     Mul(Vec<Node>),
+//     Div(Vec<Node>),
+//
+//     Call(String, Vec<Node>),
+//
+//     If {
+//         cond: Vec<Node>,
+//         block: Vec<Node>,
+//     },
+//
+//     Def {
+//         name: String,
+//         typ: Box<Node>,
+//         val: Vec<Node>,
+//     },
+//
+//     Fn {
+//         name: String,
+//         args: Vec<Node>,
+//         ret_type: Box<Node>,
+//     },
+// }
+
+
 #[derive(Clone, Debug)]
 pub struct Node {
-    tokval: Token,
-    subnodes: Vec<Node>,
+    tok: Token,
+    children: Vec<Node>,
 }
 
 impl Node {
     pub fn new(tok: Token) -> Self {
         Self {
-            tokval: tok,
-            subnodes: Vec::new(),
+            tok: tok,
+            children: Vec::new(),
         }
     }
-}
-
-pub enum Prog {
-    Add(Box<Prog>),
-    Sub(Box<Prog>),
-    Mul(Box<Prog>),
-    Div(Box<Prog>),
-
-    Str(String),
-    Num(i64),
-    Float(f64),
-
-    Def {
-        name: String,
-        typ: Literal,
-        val: Box<Prog>,
-    },
-
-    Block(Vec<Prog>),
-    Expr(Vec<Prog>),
-    Call(String, Vec<Prog>),
 }
 
 pub struct Parser {
+    out: Vec<Node>,
+    outidx: usize,
     toks: Vec<Token>,
-
-    start: u64,
-    current: u64,
-    line: u64,
-
-    nodes: Vec<Node>,
-    is_at_end: bool,
+    tokidx: usize,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(toks: Vec<Token>) -> Self {
         Self {
-            toks: tokens,
-
-            start: 0,
-            current: 0,
-            line: 1,
-
-            nodes: Vec::new(),
-            is_at_end: false,
+            out: Vec::new(),
+            outidx: 0,
+            toks: toks,
+            tokidx: 0, 
         }
     }
 
-    pub fn eval(&mut self, e: &Expr) {
-        match e {
-            
-            _ => {}
+    pub fn parse(&mut self) -> Vec<Node> {
+        for i in self.toks.clone() {
+            println!("{:?}", i);
+            let n = self.parse_expr();
+            self.out.push(n);
+        }
+
+        self.out.clone()
+    }
+
+    pub fn parse_expr(&mut self) -> Node {
+        let t = (&self.toks[self.tokidx]).clone();
+
+        match t.literal {
+            Literal::Int(_) => {
+                return Node::new(Token::new(TokType::Int, t.lexeme, t.literal, t.line));
+            },
+            Literal::Float(_) => {
+                return Node::new(Token::new(TokType::Float, t.lexeme, t.literal, t.line));
+            },
+            Literal::Str(_) => {
+                return Node::new(Token::new(TokType::String, t.lexeme, t.literal, t.line));
+            },
+
+            _ => {},
+        }
+
+        match t.ltype {
+            TokType::Add => {
+                let mut o = Node::new(Token::new(TokType::Add, t.lexeme, t.literal, t.line));
+                o.children.push(self.parse_add());
+                return o;
+            },
+
+            TokType::Eof => { return Node::new(Token::new(TokType::Eof, String::new(), Literal::Null, 0))},
+            TokType::Newline => { return Node::new(Token::new(TokType::Newline, String::new(), Literal::Null, 0)); },
+            _ => panic!("unrecognized token type '{:?}' while parsing", t.ltype),
         }
     }
 
-    pub fn parse_nodes(&mut self) -> Vec<Node> {
-        while !self.is_at_end {
-            if self.toks[self.current as usize].ltype == TokType::Eof {
-                break;
-            }
-            self.start = self.current;
-            self.parse_node();
+    fn parse_add(&mut self) -> Node {
+        let mut a = Node::new(Token::new(TokType::Add, String::new(), Literal::Null, self.toks[self.tokidx].line));
+        while self.advance().ltype != TokType::Newline {
+            a.children.push(self.parse_expr());
         }
 
-        return self.nodes.clone();
-    }
-
-    fn parse_node(&mut self) {
-        let n = self.advance();
-
-        match n.ltype {
-            TokType::lBrack => self.parse_expr(),
-            // TokType::lCurl => self.parse_block(),
-            // TokType::lParen => self.parse_arr(),
-            _ => {}
-        }
-    }
-
-    fn parse_expr(&mut self) {
-        self.add_node_t(TokType::Expr);
-        let len = self.node_len() - 1;
-
-        while self.toks[self.current as usize].ltype != TokType::rBrack {
-            if self.toks[self.current as usize].ltype == TokType::Eof {
-                break;
-            }
-
-            self.nodes[len]
-                .subnodes.push(Node::new(self.toks[self.current as usize].clone()));
-
-            println!("{:#?}", self.toks[self.current as usize]);
-            
-            self.advance();
-        }
-    }
-
-    fn parse_block() {}
-    fn parse_arr() {}
-
-    fn peek(&mut self) -> Token {
-        self.toks[(self.current + 1) as usize].clone()
-    }
-
-    fn previous(&mut self) -> Token {
-        self.toks[(self.current - 1) as usize].clone()
+        a
     }
 
     fn advance(&mut self) -> Token {
-        let b = self.toks[self.current as usize].clone();
-        self.current += 1;
-        return b;
+        let b = &self.toks.clone()[self.tokidx];
+        self.tokidx += 1;
+        return b.clone();
     }
-
-    fn add_node(&mut self, t: Token) {
-        self.nodes.push(Node::new(t));
-    }
-
-    fn add_node_t(&mut self, tt: TokType) {
-        let t = Token::new(tt, String::new(), Literal::Null, self.line);
-        self.nodes.push(Node::new(t));
-    }
-
-    fn node_len(&mut self) -> usize {
-        self.nodes.clone().len()
-    }
-
-
 }

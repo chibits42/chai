@@ -30,7 +30,6 @@ impl Scanner {
                 ("def".to_string(), token::TokType::Def),
                 ("set".to_string(), token::TokType::Set),
                 ("for".to_string(), token::TokType::For),
-                ("foreach".to_string(), token::TokType::ForEach),
                 ("while".to_string(), token::TokType::While),
                 ("true".to_string(), token::TokType::True),
                 ("false".to_string(), token::TokType::False),
@@ -120,7 +119,10 @@ impl Scanner {
 
             ' ' | '\r' | '\t' => { },
 
-            '\n' => { self.line += 1 },
+            '\n' => {
+                self.line += 1;
+                self.add_token_type(token::TokType::Newline);
+            },
  
             '"' => self.string(),
 

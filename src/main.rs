@@ -9,7 +9,7 @@ fn main() {
     let mut toks = scan.scan_tokens();
 
     let mut parse = parser::Parser::new(toks);
-    let mut nodes = parse.parse_nodes();
+    let mut nodes = parse.parse();
 
     println!("{:#?}", nodes);
 }
