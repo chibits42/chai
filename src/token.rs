@@ -27,6 +27,7 @@ pub enum TokType {
 
     Expr, Block, Arr,
 
+    Null, // not used in language, this is just for the parser
 
     Newline,
     Eof,
@@ -50,6 +51,10 @@ impl Token {
             line: line,
             had_error: false,
         }
+    }
+
+    pub fn null() -> Self {
+        return Token::new(TokType::Null, String::new(), Literal::Null, 0);
     }
 }
 

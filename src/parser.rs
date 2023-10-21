@@ -53,6 +53,13 @@ impl Node {
             children: Vec::new(),
         }
     }
+
+    pub fn null() -> Self {
+        Self {
+            tok: Token::null(),
+            children: Vec::new(),
+        }
+    }
 }
 
 pub struct Parser {
@@ -73,7 +80,10 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Vec<Node> {
+        println!("{:#?}", self.toks);
+        self.toks.push(Token::null());
         for i in self.toks.clone() {
+            if self.tokidx == self.toks.len() { break; }
             println!("{:?}", i);
             let n = self.parse_expr();
             self.out.push(n);
@@ -83,7 +93,9 @@ impl Parser {
     }
 
     pub fn parse_expr(&mut self) -> Node {
-        let t = (&self.toks[self.tokidx]).clone();
+        if self.is_at_end() { return Node::null(); }
+        //println!("{}", self.tokidx);
+        let t = self.toks[self.tokidx].clone();
 
         match t.literal {
             Literal::Int(_) => {
@@ -100,15 +112,14 @@ impl Parser {
         }
 
         match t.ltype {
-            TokType::Add => {
-                let mut o = Node::new(Token::new(TokType::Add, t.lexeme, t.literal, t.line));
-                o.children.push(self.parse_add());
-                return o;
-            },
+            TokType::Add => return self.parse_add(),
+
+
+            TokType::lBrack => return self.parse_brack(),
 
             TokType::Eof => { return Node::new(Token::new(TokType::Eof, String::new(), Literal::Null, 0))},
             TokType::Newline => { return Node::new(Token::new(TokType::Newline, String::new(), Literal::Null, 0)); },
-            _ => panic!("unrecognized token type '{:?}' while parsing", t.ltype),
+            _ => { return Node::null(); }, //panic!("unrecognized token type '{:?}' while parsing", t.ltype),
         }
     }
 
@@ -121,9 +132,39 @@ impl Parser {
         a
     }
 
+    fn parse_brack(&mut self) -> Node {
+        let mut o = Node::new(
+            Token::new(
+                TokType::Expr,
+                String::new(),
+                Literal::Null,
+                self.toks[self.tokidx].line,    
+            )
+        );
+    
+        println!("{:#?}", self.peek().ltype);
+        while self.peek().ltype != TokType::rBrack && !self.is_at_end() {
+            o.children.push(self.parse_expr());
+            self.advance();
+        }
+
+        self.advance();
+
+        o
+    }
+
     fn advance(&mut self) -> Token {
-        let b = &self.toks.clone()[self.tokidx];
+        let b = self.toks[self.tokidx].clone();
         self.tokidx += 1;
         return b.clone();
     }
-}
+
+    fn peek(&self) -> Token {
+        if self.is_at_end() { return Token::null(); }
+        return self.toks[self.tokidx].clone();
+    }
+
+    fn is_at_end(&self) -> bool {
+        return self.tokidx as usize >= self.toks.len() - 1;
+    }
+} 
