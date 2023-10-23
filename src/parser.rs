@@ -1,45 +1,5 @@
 use crate::token::*;
 
-// pub enum Node {
-//     Null,
-//
-//     // types
-//     Num(i64),
-//     Float(f64),
-//     Str(String),
-//     Char(char),
-//     Bool(bool),
-//
-//     Expr(Vec<Node>),
-//     Block(Vec<Node>),
-//     Arr(Vec<Node>),
-//
-//     Add(Vec<Node>),
-//     Sub(Vec<Node>),
-//     Mul(Vec<Node>),
-//     Div(Vec<Node>),
-//
-//     Call(String, Vec<Node>),
-//
-//     If {
-//         cond: Vec<Node>,
-//         block: Vec<Node>,
-//     },
-//
-//     Def {
-//         name: String,
-//         typ: Box<Node>,
-//         val: Vec<Node>,
-//     },
-//
-//     Fn {
-//         name: String,
-//         args: Vec<Node>,
-//         ret_type: Box<Node>,
-//     },
-// }
-
-
 #[derive(Clone, Debug)]
 pub struct Node {
     tok: Token,
@@ -66,7 +26,7 @@ pub struct Parser {
     out: Vec<Node>,
     outidx: usize,
     toks: Vec<Token>,
-    tokidx: usize,
+    idx: usize,
 }
 
 impl Parser {
@@ -75,18 +35,19 @@ impl Parser {
             out: Vec::new(),
             outidx: 0,
             toks: toks,
-            tokidx: 0, 
+            idx: 0, 
         }
     }
 
     pub fn parse(&mut self) -> Vec<Node> {
         println!("{:#?}", self.toks);
         self.toks.push(Token::null());
-        for i in self.toks.clone() {
-            if self.tokidx == self.toks.len() { break; }
-            println!("{:?}", i);
+        while !self.is_at_end() { 
+            //println!("{:?}", i);
             let n = self.parse_expr();
             self.out.push(n);
+
+            self.advance();
         }
 
         self.out.clone()
@@ -95,7 +56,7 @@ impl Parser {
     pub fn parse_expr(&mut self) -> Node {
         if self.is_at_end() { return Node::null(); }
         //println!("{}", self.tokidx);
-        let t = self.toks[self.tokidx].clone();
+        let t = self.get();
 
         match t.literal {
             Literal::Int(_) => {
@@ -112,59 +73,63 @@ impl Parser {
         }
 
         match t.ltype {
-            TokType::Add => return self.parse_add(),
-
+            TokType::Add => self.parse_arith(TokType::Add),
+            TokType::Sub => self.parse_arith(TokType::Sub),
+            TokType::Mul => self.parse_arith(TokType::Mul),
+            TokType::Div => self.parse_arith(TokType::Div),
 
             TokType::lBrack => return self.parse_brack(),
 
-            TokType::Eof => { return Node::new(Token::new(TokType::Eof, String::new(), Literal::Null, 0))},
-            TokType::Newline => { return Node::new(Token::new(TokType::Newline, String::new(), Literal::Null, 0)); },
-            _ => { return Node::null(); }, //panic!("unrecognized token type '{:?}' while parsing", t.ltype),
+            // TokType::Eof => { return Node::new(Token::new(TokType::Eof, String::new(), Literal::Null, 0))},
+            // TokType::Newline => { return Node::new(Token::new(TokType::Newline, String::new(), Literal::Null, 0)); },
+            _ => { return Node::new(t); }, //panic!("unrecognized token type '{:?}' while parsing", t.ltype),
         }
     }
 
-    fn parse_add(&mut self) -> Node {
-        let mut a = Node::new(Token::new(TokType::Add, String::new(), Literal::Null, self.toks[self.tokidx].line));
-        while self.advance().ltype != TokType::Newline {
+    // parses +, -, *, /
+    fn parse_arith(&mut self, op: TokType) -> Node {
+        let mut a = Node::new(Token::new(
+            op, String::new(), Literal::Null, 0,
+        ));
+
+        self.advance();
+
+        while !self.is_at_end() && self.get().ltype != TokType::rBrack {
             a.children.push(self.parse_expr());
+            self.advance();
         }
 
         a
     }
 
     fn parse_brack(&mut self) -> Node {
-        let mut o = Node::new(
-            Token::new(
-                TokType::Expr,
-                String::new(),
-                Literal::Null,
-                self.toks[self.tokidx].line,    
-            )
-        );
-    
-        println!("{:#?}", self.peek().ltype);
-        while self.peek().ltype != TokType::rBrack && !self.is_at_end() {
-            o.children.push(self.parse_expr());
-            self.advance();
-        }
+        let mut e = Node::new(Token::new(
+            TokType::Expr, String::new(), Literal::Null, 0,
+        ));
 
         self.advance();
 
-        o
-    }
+        while !self.is_at_end() && self.get().ltype != TokType::rBrack {
+            e.children.push(self.parse_expr());
+            self.advance();
+        }
 
-    fn advance(&mut self) -> Token {
-        let b = self.toks[self.tokidx].clone();
-        self.tokidx += 1;
-        return b.clone();
-    }
-
-    fn peek(&self) -> Token {
-        if self.is_at_end() { return Token::null(); }
-        return self.toks[self.tokidx].clone();
+        e
     }
 
     fn is_at_end(&self) -> bool {
-        return self.tokidx as usize >= self.toks.len() - 1;
+        return self.idx as usize >= self.toks.len() - 1;
+    }
+
+    fn get(&self) -> Token {
+        if self.is_at_end() { return self.toks[self.toks.len() - 1].clone(); }
+        return self.toks[self.idx].clone();
+    }
+
+    fn advance(&mut self) -> Token {
+        if self.is_at_end() { return self.toks[self.toks.len() - 1].clone(); }
+        self.idx += 1;
+        return self.toks[self.idx].clone();
+
     }
 } 
